@@ -50,4 +50,4 @@ jobs:
       - name: Run Ansible Playbook
         working-directory: ./task2
         run: |
-          ansible-playbook -i "${{ env.VM_IP }}," -u ubuntu playbook.yml
+          ansible-playbook -i "${{ env.VM_IP }}," -u ubuntu --private-key ~/.ssh/id_rsa playbook.yml
