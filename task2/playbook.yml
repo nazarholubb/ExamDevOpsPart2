@@ -4,6 +4,7 @@
   become: yes
 
   tasks:
+    # --- 2.1 Core system dependencies ---
     - name: Force apt cache update
       apt:
         update_cache: yes
@@ -17,9 +18,10 @@
           - curl
           - software-properties-common
           - conntrack
-          - socat 
+          - socat # Потрібен для port-forwarding
         state: present
 
+    # --- 2.2 Docker installation ---
     - name: Install Docker
       apt:
         name: docker.io
@@ -42,6 +44,7 @@
     - name: Reset connection to apply group changes
       meta: reset_connection
 
+    # --- 2.3 Kubectl, Minikube, Helm ---
     - name: Install kubectl
       get_url:
         url: "https://dl.k8s.io/release/v1.30.0/bin/linux/amd64/kubectl"
@@ -59,13 +62,15 @@
       args:
         creates: /usr/local/bin/helm
 
+    # --- 2.4 Kubernetes cluster launch ---
     - name: Start Minikube (User mode)
-          shell: |
-            minikube start --driver=docker
-          become: yes
-          become_user: ubuntu
-          when: not ansible_check_mode 
+      become: no # Запускаємо від імені ubuntu, а не root
+      shell: |
+        minikube start --driver=docker
+      # Пропускаємо реальний запуск під час Dry Run
+      when: not ansible_check_mode 
 
+    # --- 2.5 Proxy Forwarding (ВИМОГА ЕКЗАМЕНУ) ---
     - name: Setup kubectl proxy as a systemd service
       copy:
         dest: /etc/systemd/system/kubectl-proxy.service
@@ -76,7 +81,7 @@
 
           [Service]
           User=ubuntu
-          Environment=KUBECONFIG=/home/ubuntu/.kube/config
+          # Прокидаємо проксі на порт 8001
           ExecStart=/usr/local/bin/kubectl proxy --address='0.0.0.0' --port=8001 --accept-hosts='^.*$'
           Restart=always
 
