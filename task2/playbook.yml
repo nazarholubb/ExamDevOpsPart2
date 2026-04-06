@@ -60,12 +60,14 @@
         creates: /usr/local/bin/helm
 
     - name: Start Minikube (User mode)
-      shell: |
-        minikube start --driver=docker
+          shell: |
+            minikube start --driver=docker
+          become: yes
+          become_user: ubuntu =
       when: not ansible_check_mode 
 
     - name: Setup kubectl proxy as a systemd service
-      copy:
+=      copy:
         dest: /etc/systemd/system/kubectl-proxy.service
         content: |
           [Unit]
@@ -74,7 +76,7 @@
 
           [Service]
           User=ubuntu
-          # Прокидаємо проксі на порт 8001
+          Environment=KUBECONFIG=/home/ubuntu/.kube/config
           ExecStart=/usr/local/bin/kubectl proxy --address='0.0.0.0' --port=8001 --accept-hosts='^.*$'
           Restart=always
 

@@ -1,15 +1,15 @@
 name: "Ansible CI/CD (Task 2)"
 
 on:
-  push:
-    branches: [ "main" ]
-    paths:
-      - 'task2/**' 
+  workflow_run:
+      workflows: ["Terraform CI/CD (Task 1)"] # НАЗВА МАЄ БУТИ ТАКА Ж, ЯК У ПЕРШОМУ ФАЙЛІ
+      types:
+        - completed
   workflow_dispatch: 
 jobs:
   ansible:
     runs-on: ubuntu-latest
-
+    if: ${{ github.event.workflow_run.conclusion == 'success' || github.event_name == 'workflow_dispatch' }}
     env:
       GOOGLE_CREDENTIALS: ${{ secrets.GCP_CREDENTIALS }}
 
