@@ -1,27 +1,25 @@
-name: "Ansible Software Deployment"
+name: "Ansible Software Deployment(Task 2)"
 
 on:
   workflow_run:
-    workflows: ["Terraform CI/CD"] # ПЕРЕВІРТЕ НАЗВУ ВАШОГО ПЕРШОГО WORKFLOW
+    workflows: ["Terraform CI/CD"] 
     types: [completed]
   workflow_dispatch: 
 
 jobs:
   ansible:
     runs-on: ubuntu-latest
-    # Запускаємо тільки якщо Terraform пройшов успішно
     if: ${{ github.event.workflow_run.conclusion == 'success' || github.event_name == 'workflow_dispatch' }}
 
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      # Отримуємо IP напряму (це позбавить нас помилок з артефактами)
       - name: Setup Terraform & Get IP
         env:
           GOOGLE_CREDENTIALS: ${{ secrets.GCP_CREDENTIALS }}
         run: |
-          cd task1
+          cd terraform
           terraform init
           VM_IP=$(terraform output -raw vm_ip)
           echo "VM_IP=$VM_IP" >> $GITHUB_ENV
