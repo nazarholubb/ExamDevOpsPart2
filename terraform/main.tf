@@ -60,9 +60,10 @@ resource "google_compute_instance" "node" {
 
   }
 
-  metadata = {
+    metadata = {
     ssh-keys = "ubuntu:${var.ssh_public_key}"
-    enable-oslogin = "FALSE" # Це змусить Google слухати наші ключі з метаданих
+    enable-oslogin = "FALSE"
+    block-project-ssh-keys = "TRUE"
     }
 }
 

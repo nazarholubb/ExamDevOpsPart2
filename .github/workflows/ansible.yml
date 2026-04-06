@@ -34,32 +34,24 @@ jobs:
       - name: Setup SSH Key
         run: |
           mkdir -p ~/.ssh
-          rm -f ~/.ssh/id_rsa ~/.ssh/known_hosts
-          
-          # Записуємо ключ через printf для збереження формату
-          printf "%s" "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
-          
-          # Створюємо конфіг, який змушує SSH приймати наш ключ
-          cat <<EOF > ~/.ssh/config
-          Host *
-            StrictHostKeyChecking no
-            UserKnownHostsFile /dev/null
-            IdentitiesOnly yes
-            IdentityFile ~/.ssh/id_rsa
-            PubkeyAcceptedAlgorithms +ssh-rsa
-            HostkeyAlgorithms +ssh-rsa
-          EOF
+          ssh-keyscan -H ${{ env.VM_IP }} >> ~/.ssh/known_hosts
 
       - name: Ansible Pre-install Check
-        working-directory: ./task2
         run: |
-          ansible-playbook -i "${{ env.VM_IP }}," -u ubuntu \
+          ansible-playbook ansible/playbook.yml \
+            -i "${{ env.VM_IP }}," \
+            -u ubuntu \
             --private-key ~/.ssh/id_rsa \
-            --check --diff playbook.yml
+            --ssh-common-args='-o StrictHostKeyChecking=no' \
+            --check \
+            --diff
 
-      - name: Run Ansible Playbook
-        working-directory: ./task2
+      - name: Ansible Real Install
         run: |
-          ansible-playbook -i "${{ env.VM_IP }}," -u ubuntu \
-            --private-key ~/.ssh/id_rsa playbook.yml -vvv
+          ansible-playbook ansible/playbook.yml \
+            -i "${{ env.VM_IP }}," \
+            -u ubuntu \
+            --private-key ~/.ssh/id_rsa \
+            --ssh-common-args='-o StrictHostKeyChecking=no'
