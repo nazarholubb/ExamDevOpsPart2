@@ -59,11 +59,6 @@ variable "image" {
   type        = string
 }
 
-variable "state_bucket" {
-  description = "Terraform state bucket"
-  type        = string
-}
-
 variable "ssh_public_key" {
   type = string
 }
