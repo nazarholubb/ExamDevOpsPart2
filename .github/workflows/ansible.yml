@@ -2,7 +2,7 @@ name: "Ansible CI/CD (Task 2)"
 
 on:
   workflow_run:
-      workflows: ["Terraform CI/CD (Task 1)"] # НАЗВА МАЄ БУТИ ТАКА Ж, ЯК У ПЕРШОМУ ФАЙЛІ
+      workflows: ["Terraform CI/CD (Task 1)"] 
       types:
         - completed
   workflow_dispatch: 
@@ -55,8 +55,3 @@ jobs:
             -u ubuntu \
             --private-key ~/.ssh/id_rsa \
             --ssh-common-args='-o StrictHostKeyChecking=no'
-      - name: Run Monitoring Task (Task 3)
-        working-directory: ./task3 
-        run: |
-          ansible-playbook -i "${{ env.VM_IP }}," -u ubuntu \
-            --private-key ~/.ssh/id_rsa monitor.yml -vvv
