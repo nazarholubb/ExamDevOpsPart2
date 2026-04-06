@@ -40,7 +40,7 @@ jobs:
 
       - name: Ansible Pre-install Check
         run: |
-          ansible-playbook ansible/playbook.yml \
+          ansible-playbook task2/playbook.yml \
             -i "${{ env.VM_IP }}," \
             -u ubuntu \
             --private-key ~/.ssh/id_rsa \
@@ -50,7 +50,7 @@ jobs:
 
       - name: Ansible Real Install
         run: |
-          ansible-playbook ansible/playbook.yml \
+          ansible-playbook task2/playbook.yml \
             -i "${{ env.VM_IP }}," \
             -u ubuntu \
             --private-key ~/.ssh/id_rsa \
