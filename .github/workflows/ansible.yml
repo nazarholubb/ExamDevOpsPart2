@@ -40,12 +40,9 @@ jobs:
       - name: Setup SSH Key
         run: |
           mkdir -p ~/.ssh
-          # Беремо справжній приватний ключ з ваших секретів
           echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
-          # Вимикаємо питання "Are you sure you want to continue connecting?"
-          echo "StrictHostKeyChecking no" >> ~/.ssh/config
-
+          ls -l ~/.ssh/id_rsa 
 
       - name: Run Ansible Playbook
         working-directory: ./task2
