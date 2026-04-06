@@ -67,7 +67,7 @@
       when: not ansible_check_mode 
 
     - name: Setup kubectl proxy as a systemd service
-=      copy:
+      copy:
         dest: /etc/systemd/system/kubectl-proxy.service
         content: |
           [Unit]
