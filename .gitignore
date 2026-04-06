@@ -1,25 +1,23 @@
-# Локальні директорії та плагіни Terraform
+
 .terraform/
 
-# Файли стану (навіть якщо ви використовуєте GCS бакет, локальні бекапи не мають потрапити в Git)
+
 *.tfstate
 *.tfstate.*
 
-# Збійні логи
+
 crash.log
 crash.*.log
-
-# Файли зі змінними 
+ 
 *.tfvars
 *.tfvars.json
 
-# Файли з ключами доступу (КРИТИЧНО ВАЖЛИВО для GCP та SSH!)
 *.json
 *.pem
 id_rsa
 id_rsa.pub
 *.key
 
-# Системні файли ОС
+
 .DS_Store
 Thumbs.db
