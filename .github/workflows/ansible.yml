@@ -1,34 +1,46 @@
-name: "Ansible Software Deployment(Task 2)"
+name: "Ansible CI/CD (Task 2)"
 
 on:
-  workflow_run:
-    workflows: ["Terraform CI/CD"] 
-    types: [completed]
+  push:
+    branches: [ "main" ]
+    paths:
+      - 'task2/**' 
   workflow_dispatch: 
-
 jobs:
   ansible:
     runs-on: ubuntu-latest
-    if: ${{ github.event.workflow_run.conclusion == 'success' || github.event_name == 'workflow_dispatch' }}
+
+    env:
+      GOOGLE_CREDENTIALS: ${{ secrets.GCP_CREDENTIALS }}
 
     steps:
-      - name: Checkout Code
+      - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Setup Terraform & Get IP
-        env:
-          GOOGLE_CREDENTIALS: ${{ secrets.GCP_CREDENTIALS }}
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+
+      - name: Terraform Init
+        working-directory: ./terraform
+        run: terraform init
+
+      - name: Get VM IP
+        id: get_ip
+        working-directory: ./terraform
         run: |
-          cd terraform
-          terraform init
           VM_IP=$(terraform output -raw vm_ip)
           echo "VM_IP=$VM_IP" >> $GITHUB_ENV
 
       - name: Setup SSH Key
         run: |
           mkdir -p ~/.ssh
+          rm -f ~/.ssh/id_rsa ~/.ssh/known_hosts
+          
+          # Записуємо ключ через printf для збереження формату
           printf "%s" "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
+          
+          # Створюємо конфіг, який змушує SSH приймати наш ключ
           cat <<EOF > ~/.ssh/config
           Host *
             StrictHostKeyChecking no
@@ -40,15 +52,14 @@ jobs:
           EOF
 
       - name: Ansible Pre-install Check
+        working-directory: ./task2
         run: |
-          # ПЕРЕВІРТЕ ШЛЯХ ДО ПЛЕЙБУКА (task2 чи ansible?)
-          ansible-playbook task2/playbook.yml \
-            -i "${{ env.VM_IP }}," \
-            -u ubuntu \
-            --check --diff
+          ansible-playbook -i "${{ env.VM_IP }}," -u ubuntu \
+            --private-key ~/.ssh/id_rsa \
+            --check --diff playbook.yml
 
-      - name: Ansible Real Install
+      - name: Run Ansible Playbook
+        working-directory: ./task2
         run: |
-          ansible-playbook task2/playbook.yml \
-            -i "${{ env.VM_IP }}," \
-            -u ubuntu
+          ansible-playbook -i "${{ env.VM_IP }}," -u ubuntu \
+            --private-key ~/.ssh/id_rsa playbook.yml -vvv
