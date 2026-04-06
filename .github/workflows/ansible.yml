@@ -55,3 +55,8 @@ jobs:
             -u ubuntu \
             --private-key ~/.ssh/id_rsa \
             --ssh-common-args='-o StrictHostKeyChecking=no'
+      - name: Run Monitoring Task (Task 3)
+        working-directory: ./task3 
+        run: |
+          ansible-playbook -i "${{ env.VM_IP }}," -u ubuntu \
+            --private-key ~/.ssh/id_rsa monitor.yml -vvv
