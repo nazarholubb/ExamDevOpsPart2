@@ -1,47 +1,74 @@
-name: Terraform CI/CD (Task 1)
+name: "Terraform CI/CD (Task 1)"
 
 on:
   push:
-    branches:
-      - main
+    branches: [ "main" ]
     paths:
       - 'terraform/**' 
   workflow_dispatch: 
 
 jobs:
   terraform:
-    name: 'Terraform Deploy'
     runs-on: ubuntu-latest
+
     defaults:
       run:
         working-directory: ./terraform 
 
+    env:
+      GOOGLE_CREDENTIALS: ${{ secrets.GCP_CREDENTIALS }}
+
+      
+      TF_VAR_project_id: "exam-devops-492513"
+      TF_VAR_ssh_public_key: ${{ secrets.SSH_PUBLIC_KEY }}
+      TF_VAR_region: "europe-central2"
+      TF_VAR_zone: "europe-central2-a"
+
+      
+      TF_VAR_vm_name: "holub-node"
+      TF_VAR_vpc_name: "holub-vpc"
+      TF_VAR_subnet_name: "holub-subnet"
+      TF_VAR_firewall_name: "holub-firewall"
+      TF_VAR_bucket_name: "holub-bucket"
+
+      TF_VAR_subnet_cidr: "10.10.10.0/24"
+
+      TF_VAR_machine_type: "e2-medium"
+      TF_VAR_disk_size: "20"
+      TF_VAR_image: "ubuntu-os-cloud/ubuntu-2404-lts-amd64"
+
     steps:
-    - name: Checkout Repository
-      uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+
+      - name: Terraform Init
+        run: terraform init
 
 
-    - name: Authenticate to Google Cloud
-      uses: google-github-actions/auth@v2
-      with:
-        credentials_json: '${{ secrets.GCP_CREDENTIALS }}'
+      - name: Terraform Validate 
+        run: terraform validate
 
-    - name: Setup Terraform
-      uses: hashicorp/setup-terraform@v3
+      - name: Terraform Plan
+        run: terraform plan
 
-    - name: Terraform Init
-      run: terraform init
+      - name: Terraform Apply
+        if: github.ref == 'refs/heads/main'
+        run: terraform apply -auto-approve
 
+      - name: Get Instance IP
+        id: get_ip
+        run: |
+          VM_IP=$(terraform output -raw vm_ip)
+          echo "VM_IP=$VM_IP" >> $GITHUB_ENV
 
-    - name: Terraform Validate
-      run: terraform validate
+      - name: Save IP Address
+        run: echo "$(terraform output -raw vm_ip)" > vm_ip.txt
 
-    - name: Terraform Plan
-      run: terraform plan -out=tfplan
-      env:
-        TF_VAR_ssh_public_key: ${{ secrets.SSH_PUBLIC_KEY }}
-
-
-    - name: Terraform Apply
-      if: github.ref == 'refs/heads/main' 
-      run: terraform apply -auto-approve tfplan
+      - name: Upload IP Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: terraform-ip
+          path: task1/vm_ip.txt
