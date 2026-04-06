@@ -1,53 +1,90 @@
 ---
-- name: Install Kubernetes, Minikube, and Helm
+- name: 2. Install Kubernetes Components and Proxy
   hosts: all
-  become: yes 
-  gather_facts: yes
+  become: yes
+
   tasks:
-    - name: Update apt cache
+    - name: Force apt cache update
       apt:
         update_cache: yes
+      check_mode: false
 
-    - name: Install required dependencies
-          apt:
-            name:
-              - curl
-              - wget
-              - apt-transport-https
-              - ca-certificates
-              - gnupg
-              - conntrack
-            state: present
+    - name: Install dependencies
+      apt:
+        name:
+          - apt-transport-https
+          - ca-certificates
+          - curl
+          - software-properties-common
+          - conntrack
+          - socat 
+        state: present
 
     - name: Install Docker
       apt:
-        name: docker.io  # Спробуємо ще раз, але додамо force_apt_get
+        name: docker.io
         state: present
-        update_cache: yes
-        force_apt_get: yes
 
-    - name: Add ubuntu user to docker group
+    - name: Enable and start Docker
+      service:
+        name: docker
+        state: started
+        enabled: yes
+      when: not ansible_check_mode
+
+    - name: Add 'ubuntu' user to 'docker' group
       user:
         name: ubuntu
         groups: docker
         append: yes
+      when: not ansible_check_mode
 
-    - name: Download and install Minikube
-      get_url:
-        url: https://storage.googleapis.com/minikube/releases/latest/minikube-linux-amd64
-        dest: /usr/local/bin/minikube
-        mode: '0755'
+    - name: Reset connection to apply group changes
+      meta: reset_connection
 
-    - name: Download and install kubectl
+    - name: Install kubectl
       get_url:
-        url: https://dl.k8s.io/release/v1.30.0/bin/linux/amd64/kubectl
+        url: "https://dl.k8s.io/release/v1.30.0/bin/linux/amd64/kubectl"
         dest: /usr/local/bin/kubectl
         mode: '0755'
 
-    - name: Download and install Helm
-      shell: |
-        curl -fsSL -o get_helm.sh https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3
-        chmod 700 get_helm.sh
-        ./get_helm.sh
+    - name: Install Minikube
+      get_url:
+        url: "https://storage.googleapis.com/minikube/releases/latest/minikube-linux-amd64"
+        dest: /usr/local/bin/minikube
+        mode: '0755'
+
+    - name: Install Helm
+      shell: curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
       args:
-        creates: /usr/local/bin/helm # Не запускати скрипт, якщо helm вже встановлено
+        creates: /usr/local/bin/helm
+
+    - name: Start Minikube (User mode)
+      shell: |
+        minikube start --driver=docker
+      when: not ansible_check_mode 
+
+    - name: Setup kubectl proxy as a systemd service
+      copy:
+        dest: /etc/systemd/system/kubectl-proxy.service
+        content: |
+          [Unit]
+          Description=Kubectl Proxy
+          After=network.target
+
+          [Service]
+          User=ubuntu
+          # Прокидаємо проксі на порт 8001
+          ExecStart=/usr/local/bin/kubectl proxy --address='0.0.0.0' --port=8001 --accept-hosts='^.*$'
+          Restart=always
+
+          [Install]
+          WantedBy=multi-user.target
+
+    - name: Start and enable kubectl proxy
+      systemd:
+        name: kubectl-proxy
+        state: restarted
+        enabled: yes
+        daemon_reload: yes
+      when: not ansible_check_mode
