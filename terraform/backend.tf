@@ -1,6 +1,6 @@
 terraform {
   backend "gcs" {
-    bucket = "terraform-state-devops2"
+    bucket = "holub-bucket"
     prefix = "terraform/state"
   }
 }
