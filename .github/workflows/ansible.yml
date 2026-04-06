@@ -1,50 +1,61 @@
-name: "Ansible CI/CD (Task 2)"
+name: "Ansible Software Deployment"
 
 on:
-  push:
-    branches: [ "main" ]
-    paths:
-      - 'task2/**' 
+  workflow_run:
+    workflows: ["Terraform Deploy"] 
+    types: [completed]
   workflow_dispatch: 
 
 jobs:
   ansible:
     runs-on: ubuntu-latest
-
-    env:
-      GOOGLE_CREDENTIALS: ${{ secrets.GCP_CREDENTIALS }}
+    if: ${{ github.event.workflow_run.conclusion == 'success' || github.event_name == 'workflow_dispatch' }}
 
     steps:
-      - name: Checkout code
+      - name: Checkout Code
         uses: actions/checkout@v4
 
+      - name: Download IP Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: terraform-ip
+          run-id: ${{ github.event.workflow_run.id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path: .
 
-      - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v3
-
-      - name: Terraform Init (щоб завантажити стан)
-        working-directory: ./terraform
-        run: terraform init
-
-      - name: Get VM IP
-        id: get_ip
-        working-directory: ./terraform
-        run: |
-          VM_IP=$(terraform output -raw vm_ip)
-          echo "VM_IP=$VM_IP" >> $GITHUB_ENV
-
-
-      - name: Install Ansible
-        run: sudo apt update && sudo apt install ansible -y
+      - name: Set IP Variable
+        run: echo "VM_IP=$(cat vm_ip.txt)" >> $GITHUB_ENV
 
       - name: Setup SSH Key
-        run: |
-          mkdir -p ~/.ssh
-          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
-          chmod 600 ~/.ssh/id_rsa
-          ls -l ~/.ssh/id_rsa 
+              run: |
+                mkdir -p ~/.ssh
+                rm -f ~/.ssh/id_rsa ~/.ssh/known_hosts
+                
+                printf "%s" "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+                chmod 600 ~/.ssh/id_rsa
+                
+                cat <<EOF > ~/.ssh/config
+                Host *
+                  StrictHostKeyChecking no
+                  UserKnownHostsFile /dev/null
+                  IdentitiesOnly yes
+                  IdentityFile ~/.ssh/id_rsa
+                  PubkeyAcceptedAlgorithms +ssh-rsa
+                  HostkeyAlgorithms +ssh-rsa
+                EOF
 
-      - name: Run Ansible Playbook
-        working-directory: ./task2
+      - name: Ansible Pre-install Check
         run: |
-          ansible-playbook -i "${{ env.VM_IP }}," -u ubuntu --private-key ~/.ssh/id_rsa playbook.yml -vvv
+          ansible-playbook ansible/playbook.yml \
+            -i "${{ env.VM_IP }}," \
+            -u ubuntu \
+            --private-key ~/.ssh/id_rsa \
+            --check \
+            --diff
+
+      - name: Ansible Real Install
+        run: |
+          ansible-playbook ansible/playbook.yml \
+            -i "${{ env.VM_IP }}," \
+            -u ubuntu \
+            --private-key ~/.ssh/id_rsa
