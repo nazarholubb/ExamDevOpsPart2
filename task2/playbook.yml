@@ -2,6 +2,7 @@
 - name: Install Kubernetes, Minikube, and Helm
   hosts: all
   become: yes 
+  gather_facts: yes
   tasks:
     - name: Update apt cache
       apt:
