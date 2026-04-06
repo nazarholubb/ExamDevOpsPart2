@@ -8,15 +8,23 @@
       apt:
         update_cache: yes
 
-    - name: Install required dependencies and Docker
+    - name: Install required dependencies
+          apt:
+            name:
+              - curl
+              - wget
+              - apt-transport-https
+              - ca-certificates
+              - gnupg
+              - conntrack
+            state: present
+
+    - name: Install Docker
       apt:
-        name:
-          - curl
-          - wget
-          - apt-transport-https
-          - docker.io
-          - conntrack
+        name: docker.io  # Спробуємо ще раз, але додамо force_apt_get
         state: present
+        update_cache: yes
+        force_apt_get: yes
 
     - name: Add ubuntu user to docker group
       user:
